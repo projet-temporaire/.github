@@ -1,0 +1,46 @@
+name: Org Watchdog
+
+# Detecte les repos de l'org sans pack securite et leur ouvre une PR.
+# S'auto-heberge : les templates sont dans templates/ de ce repo.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ORG: projet-temporaire
+
+jobs:
+  propagate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Propagate security pack to repos missing it
+        env:
+          GH_TOKEN: ${{ secrets.ORG_ADMIN_PAT }}
+        run: |
+          set -uo pipefail
+          for r in $(gh repo list "$ORG" --limit 200 --json name --jq '.[].name'); do
+            [ "$r" = ".github" ] && continue
+            if gh api "repos/$ORG/$r/contents/.github/workflows/security.yml" >/dev/null 2>&1 \
+            || gh api "repos/$ORG/$r/contents/.github/workflows/security-ci.yml" >/dev/null 2>&1; then
+              echo "[ok] $r deja equipe"; continue
+            fi
+            def=$(gh api "repos/$ORG/$r" --jq .default_branch) || continue
+            base=$(gh api "repos/$ORG/$r/git/refs/heads/$def" --jq .object.sha 2>/dev/null) || { echo "[skip] $r vide"; continue; }
+            gh api -X POST "repos/$ORG/$r/git/refs" -f ref=refs/heads/chore/security-quality-pack -f sha="$base" >/dev/null 2>&1 || true
+            for f in security.yml quality.yml dependabot.yml; do
+              dest=".github/dependabot.yml"; [ "$f" != "dependabot.yml" ] && dest=".github/workflows/$f"
+              gh api -X PUT "repos/$ORG/$r/contents/$dest" -f message="ci: add security pack (org watchdog)" \
+                -f content="$(base64 -w0 "templates/$f")" -f branch=chore/security-quality-pack >/dev/null 2>&1 || true
+            done
+            gh pr create --repo "$ORG/$r" --base "$def" --head chore/security-quality-pack \
+              --title "chore: security pack (org watchdog)" \
+              --body "Pack securite ajoute automatiquement par l'org watchdog (projet-temporaire/.github)." 2>/dev/null \
+              && echo "[pr] $r" || echo "[warn] $r"
+          done
