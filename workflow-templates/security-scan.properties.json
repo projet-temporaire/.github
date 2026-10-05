@@ -1,0 +1,6 @@
+{
+  "name": "Security Scan",
+  "description": "Gitleaks (secrets) a chaque push/PR + scan hebdo",
+  "iconName": "octicon shield-check",
+  "categories": ["security"]
+}
