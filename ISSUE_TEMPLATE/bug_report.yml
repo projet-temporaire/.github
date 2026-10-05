@@ -1,0 +1,23 @@
+name: Rapport de bug
+description: Signaler un comportement inattendu
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Que s'est-il passe ? Qu'attendiez-vous ?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Etapes de reproduction
+      placeholder: "1. ...\n2. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environnement
+      placeholder: OS, version Node/Python, version du package
