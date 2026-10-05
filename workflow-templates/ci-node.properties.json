@@ -1,0 +1,6 @@
+{
+  "name": "CI Node.js",
+  "description": "Build et tests Node.js a chaque push/PR",
+  "iconName": "octicon play",
+  "categories": ["continuous-integration", "node"]
+}
